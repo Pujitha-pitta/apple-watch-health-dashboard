@@ -57,6 +57,16 @@
       </article>
     </section>
 
+    <section class="goal-section" aria-labelledby="goals-heading">
+      <div class="section-title-row"><div><p class="eyebrow">AIM FOR YOUR OWN BASELINE</p><h2 id="goals-heading">Personal daily goals</h2></div><details class="goal-editor"><summary>Adjust goals</summary><form id="goal-form"><label>Steps <input id="goal-steps-input" name="steps" type="number" min="1" max="100000" step="500" required></label><label>Exercise minutes <input id="goal-exercise-input" name="exercise" type="number" min="1" max="1440" step="5" required></label><label>Sleep hours <input id="goal-sleep-input" name="sleep" type="number" min="1" max="24" step="0.5" required></label><button class="button button-dark" type="submit">Save goals</button></form></details></div>
+      <div class="goal-grid">
+        <article class="goal-card"><div class="goal-card-top"><span>STEPS</span><span id="goal-steps-status">—</span></div><div class="goal-number"><strong id="goal-steps-value">—</strong><span>/ <b id="goal-steps-target">8,000</b> steps</span></div><div class="goal-track"><span id="goal-steps-fill"></span></div></article>
+        <article class="goal-card"><div class="goal-card-top"><span>EXERCISE</span><span id="goal-exercise-status">—</span></div><div class="goal-number"><strong id="goal-exercise-value">—</strong><span>/ <b id="goal-exercise-target">30</b> min</span></div><div class="goal-track"><span id="goal-exercise-fill"></span></div></article>
+        <article class="goal-card"><div class="goal-card-top"><span>SLEEP</span><span id="goal-sleep-status">—</span></div><div class="goal-number"><strong id="goal-sleep-value">—</strong><span>/ <b id="goal-sleep-target">8</b> hrs</span></div><div class="goal-track"><span id="goal-sleep-fill"></span></div></article>
+      </div>
+      <p class="goal-note">Progress uses your average for the selected date range. Targets are personal settings, not medical recommendations.</p>
+    </section>
+
     <section class="analysis-grid">
       <article class="panel activity-panel">
         <div class="panel-heading"><div><p class="eyebrow">MOVEMENT</p><h2>Steps through the week</h2></div><div class="legend"><span></span> Daily steps</div></div>
@@ -68,6 +78,12 @@
         <div class="sleep-score"><div class="score-ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-track" cx="60" cy="60" r="49"></circle><circle id="sleep-ring" class="ring-progress" cx="60" cy="60" r="49"></circle></svg><div><strong id="sleep-value">—</strong><span>hrs avg</span></div></div><div class="sleep-copy"><strong id="sleep-consistency">Loading…</strong><span>average sleep per night</span></div></div>
         <div class="sleep-week" id="sleep-week" aria-label="Sleep duration by day"></div>
       </article>
+    </section>
+
+    <section class="panel workout-panel" aria-labelledby="workout-heading">
+      <div class="panel-heading"><div><p class="eyebrow">TRAINING LOG</p><h2 id="workout-heading">Workouts in this period</h2></div><span class="workout-badge" id="workout-source-label">DEMO SESSIONS</span></div>
+      <div class="workout-summary"><div><strong id="workout-count">—</strong><span>sessions</span></div><div><strong id="workout-duration">—</strong><span>total minutes</span></div><div><strong id="workout-calories">—</strong><span>active kcal</span></div></div>
+      <div id="workout-list" class="workout-list" aria-live="polite"></div>
     </section>
 
     <section class="insight-row"><div class="insight-symbol" aria-hidden="true">✳</div><div><p class="eyebrow">YOUR WEEK, IN A SENTENCE</p><p id="insight-text">Loading your rhythm…</p></div><span class="demo-label" id="source-note">DEMO INSIGHT</span></section>
