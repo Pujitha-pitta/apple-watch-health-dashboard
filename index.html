@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f5f0">
+  <meta name="description" content="A local-first Apple Health dashboard for exploring daily activity, heart rate, and sleep trends.">
+  <title>Pulseboard — Apple Health analytics</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Pulseboard home"><span class="brand-mark">p</span><span>pulseboard</span></a>
+      <div class="topbar-meta"><span class="privacy-pill"><span></span> Your data stays on this device</span><button id="import-button" class="button button-dark" type="button">Import health data <span aria-hidden="true">↗</span></button></div>
+    </header>
+
+    <section class="intro" id="top">
+      <div><p class="eyebrow">APPLE HEALTH · PERSONAL ANALYTICS</p><h1>Know your<br><em>daily rhythm.</em></h1><p class="intro-copy">A thoughtful overview of movement, recovery, and the patterns that connect them.</p></div>
+      <div class="intro-side"><span class="live-dot"></span><span id="data-status">Sample data · 30 days</span><button id="reset-demo" class="text-button" type="button">Reset demo</button></div>
+    </section>
+
+    <section class="toolbar" aria-label="Dashboard filters">
+      <div class="range-tabs" role="group" aria-label="Date range">
+        <button class="range-button active" data-days="7" aria-pressed="true" type="button">7 days</button>
+        <button class="range-button" data-days="30" aria-pressed="false" type="button">30 days</button>
+      </div>
+      <label class="source-control" for="source-filter"><span>DATA SOURCE</span><select id="source-filter"><option value="all">All sources</option><option value="watch">Apple Watch</option></select></label>
+      <span id="date-range" class="date-range"></span>
+    </section>
+
+    <section class="metric-grid" aria-label="Health highlights">
+      <article class="metric-card steps-card">
+        <div class="metric-head"><span class="metric-label">AVERAGE DAILY STEPS</span><span class="metric-icon steps-icon" aria-hidden="true">↗</span></div>
+        <div class="metric-value"><strong id="steps-value">—</strong><span>steps</span></div>
+        <div class="metric-foot"><span id="steps-change" class="trend-chip">—</span><span>vs previous period</span></div>
+        <div class="sparkline" id="steps-sparkline" aria-label="Steps trend"></div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-head"><span class="metric-label">ACTIVE ENERGY</span><span class="metric-icon energy-icon" aria-hidden="true">✳</span></div>
+        <div class="metric-value"><strong id="energy-value">—</strong><span>kcal / day</span></div>
+        <div class="metric-foot"><span class="subtle-chip">MOVE</span><span>daily average</span></div>
+        <div class="metric-meter"><span id="energy-meter"></span></div>
+      </article>
+      <article class="metric-card">
+        <div class="metric-head"><span class="metric-label">EXERCISE TIME</span><span class="metric-icon exercise-icon" aria-hidden="true">◷</span></div>
+        <div class="metric-value"><strong id="exercise-value">—</strong><span>min / day</span></div>
+        <div class="metric-foot"><span class="subtle-chip">EXERCISE</span><span id="exercise-goal">daily average</span></div>
+        <div class="metric-meter mint-meter"><span id="exercise-meter"></span></div>
+      </article>
+      <article class="metric-card recovery-card">
+        <div class="metric-head"><span class="metric-label">RESTING HEART RATE</span><span class="metric-icon heart-icon" aria-hidden="true">♡</span></div>
+        <div class="metric-value"><strong id="heart-value">—</strong><span>bpm</span></div>
+        <div class="metric-foot"><span id="heart-change" class="trend-chip">—</span><span>period average</span></div>
+        <div class="sparkline heart-sparkline" id="heart-sparkline" aria-label="Resting heart rate trend"></div>
+      </article>
+    </section>
+
+    <section class="analysis-grid">
+      <article class="panel activity-panel">
+        <div class="panel-heading"><div><p class="eyebrow">MOVEMENT</p><h2>Steps through the week</h2></div><div class="legend"><span></span> Daily steps</div></div>
+        <div id="steps-chart" class="chart-wrap" role="img" aria-label="Daily steps chart"></div>
+        <div class="chart-summary"><span><strong id="best-day">—</strong> best day</span><span><strong id="step-total">—</strong> total steps</span></div>
+      </article>
+      <article class="panel sleep-panel">
+        <div class="panel-heading"><div><p class="eyebrow">RECOVERY</p><h2>Sleep consistency</h2></div><span class="moon-mark" aria-hidden="true">☾</span></div>
+        <div class="sleep-score"><div class="score-ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="ring-track" cx="60" cy="60" r="49"></circle><circle id="sleep-ring" class="ring-progress" cx="60" cy="60" r="49"></circle></svg><div><strong id="sleep-value">—</strong><span>hrs avg</span></div></div><div class="sleep-copy"><strong id="sleep-consistency">Loading…</strong><span>average sleep per night</span></div></div>
+        <div class="sleep-week" id="sleep-week" aria-label="Sleep duration by day"></div>
+      </article>
+    </section>
+
+    <section class="insight-row"><div class="insight-symbol" aria-hidden="true">✳</div><div><p class="eyebrow">YOUR WEEK, IN A SENTENCE</p><p id="insight-text">Loading your rhythm…</p></div><span class="demo-label" id="source-note">DEMO INSIGHT</span></section>
+
+    <footer><span>Pulseboard · A personal analytics project</span><span>Apple Health export compatible · No account · No upload</span></footer>
+    <input id="health-file" type="file" accept=".xml,.csv,text/xml,text/csv,application/xml" hidden>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </main>
+</body>
+</html>
