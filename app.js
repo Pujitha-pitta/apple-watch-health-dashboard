@@ -4,7 +4,12 @@ today.setHours(0, 0, 0, 0);
 let activeDays = 7;
 let sourceFilter = 'all';
 let importedRecords = null;
+let importedWorkouts = null;
 let demoRecords = buildDemoRecords();
+let demoWorkouts = buildDemoWorkouts();
+const GOALS_KEY = 'pulseboard-daily-goals-v1';
+const DEFAULT_GOALS = { steps: 8000, exercise: 30, sleep: 8 };
+let goals = loadGoals();
 let toastTimer;
 
 const $ = selector => document.querySelector(selector);
@@ -23,6 +28,35 @@ function buildDemoRecords() {
     rows.push({ date, metric: 'sleep', value: Math.round((6.8 + Math.sin(offset * .61) * .8 + ((offset * 9) % 8) / 20) * 60) / 60, source: 'Pitta’s Apple Watch' });
   }
   return rows;
+}
+
+function buildDemoWorkouts() {
+  const types = ['Outdoor Run', 'Strength Training', 'Outdoor Walk', 'Cycling'];
+  const workouts = [];
+  for (let offset = 0; offset < 30; offset++) {
+    if (offset % 3 === 0 || offset % 7 === 2) {
+      workouts.push({
+        date: new Date(today.getTime() - offset * DAY_MS),
+        type: types[(offset * 3) % types.length],
+        duration: 28 + ((offset * 11) % 39),
+        energy: 170 + ((offset * 37) % 240),
+        source: 'Pitta’s Apple Watch'
+      });
+    }
+  }
+  return workouts;
+}
+
+function loadGoals() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(GOALS_KEY));
+    if (saved) return {
+      steps: Number(saved.steps) > 0 ? Number(saved.steps) : DEFAULT_GOALS.steps,
+      exercise: Number(saved.exercise) > 0 ? Number(saved.exercise) : DEFAULT_GOALS.exercise,
+      sleep: Number(saved.sleep) > 0 ? Number(saved.sleep) : DEFAULT_GOALS.sleep
+    };
+  } catch { /* Use device defaults if local storage is unavailable. */ }
+  return { ...DEFAULT_GOALS };
 }
 
 function dateKey(date) {
@@ -114,6 +148,53 @@ function renderSleepWeek(days) {
     bar.append(fill, label); root.append(bar);
   });
 }
+function renderGoals(steps, exercise, sleep) {
+  const values = { steps, exercise, sleep };
+  const labels = { steps: '#goal-steps-value', exercise: '#goal-exercise-value', sleep: '#goal-sleep-value' };
+  Object.keys(goals).forEach(key => {
+    const value = values[key];
+    const target = goals[key];
+    const percent = value == null ? 0 : Math.min(100, value / target * 100);
+    setText(labels[key], value == null ? '—' : key === 'sleep' ? value.toFixed(1) : numberFormat.format(Math.round(value)));
+    setText(`#goal-${key}-target`, key === 'sleep' ? String(target) : numberFormat.format(target));
+    setText(`#goal-${key}-status`, value == null ? 'NO DATA' : percent >= 100 ? 'GOAL MET' : `${Math.round(percent)}%`);
+    $(`#goal-${key}-fill`).style.width = `${percent}%`;
+    $(`#goal-${key}-fill`).classList.toggle('goal-met', value != null && percent >= 100);
+    $(`#goal-${key}-status`).classList.toggle('goal-met', value != null && percent >= 100);
+    $(`#goal-${key}-input`).value = target;
+  });
+}
+function renderWorkouts(allDays) {
+  const pool = importedWorkouts === null ? demoWorkouts : importedWorkouts;
+  const sourceWorkouts = sourceFilter === 'watch' ? pool.filter(workout => /watch/i.test(workout.source || '')) : pool;
+  const latestMetricDate = allDays.length ? allDays[allDays.length - 1].date : null;
+  const latestWorkoutDate = sourceWorkouts.length ? sourceWorkouts.reduce((latest, workout) => workout.date > latest ? workout.date : latest, sourceWorkouts[0].date) : null;
+  const latestDate = latestMetricDate && latestWorkoutDate
+    ? (latestMetricDate > latestWorkoutDate ? latestMetricDate : latestWorkoutDate)
+    : latestMetricDate || latestWorkoutDate || today;
+  const start = new Date(latestDate); start.setDate(start.getDate() - (activeDays - 1)); start.setHours(0, 0, 0, 0);
+  const end = new Date(latestDate); end.setDate(end.getDate() + 1); end.setHours(0, 0, 0, 0);
+  const workouts = sourceWorkouts.filter(workout => workout.date >= start && workout.date < end).sort((a, b) => b.date - a.date);
+  setText('#workout-count', numberFormat.format(workouts.length));
+  setText('#workout-duration', numberFormat.format(Math.round(workouts.reduce((sum, workout) => sum + workout.duration, 0))));
+  const energy = workouts.reduce((sum, workout) => sum + (workout.energy || 0), 0);
+  setText('#workout-calories', energy ? numberFormat.format(Math.round(energy)) : '—');
+  setText('#workout-source-label', importedWorkouts === null ? 'DEMO SESSIONS' : 'LOCAL IMPORT');
+  const list = $('#workout-list'); list.replaceChildren();
+  if (!workouts.length) {
+    const empty = document.createElement('p'); empty.className = 'workout-empty';
+    empty.textContent = importedWorkouts === null ? 'No demo sessions in this date range.' : 'No workout records found in this date range of the import.';
+    list.append(empty); return;
+  }
+  workouts.slice(0, 6).forEach(workout => {
+    const row = document.createElement('div'); row.className = 'workout-row';
+    const name = document.createElement('strong'); name.textContent = workout.type;
+    const detail = document.createElement('span');
+    const date = dateLabel(workout.date, { month: 'short', day: 'numeric' });
+    detail.textContent = `${date} · ${Math.round(workout.duration)} min${workout.energy ? ` · ${Math.round(workout.energy)} kcal` : ''}`;
+    row.append(name, detail); list.append(row);
+  });
+}
 function render() {
   const allDays = aggregateDays(recordsInScope());
   const visible = allDays.slice(-activeDays);
@@ -143,6 +224,7 @@ function render() {
   const sleepPercent = meanSleep ? Math.min(100, meanSleep / 8 * 100) : 0;
   $('#sleep-ring').style.strokeDashoffset = String(308 * (1 - sleepPercent / 100));
   setText('#sleep-consistency', meanSleep == null ? 'No sleep data' : meanSleep >= 7.5 ? 'Steady recovery' : meanSleep >= 6.5 ? 'Room to recharge' : 'Short nights lately');
+  renderGoals(meanSteps, meanExercise, meanSleep);
   const shownDates = visible.map(day => day.date);
   setText('#date-range', shownDates.length ? `${dateLabel(shownDates[0], { month: 'short', day: 'numeric' })} — ${dateLabel(shownDates[shownDates.length - 1], { month: 'short', day: 'numeric', year: 'numeric' })}` : 'No dates in this range');
   const best = visible.reduce((winner, day) => !winner || day.steps > winner.steps ? day : winner, null);
@@ -152,6 +234,7 @@ function render() {
   drawSparkline($('#steps-sparkline'), visible.map(day => day.steps), '#5a805f');
   drawSparkline($('#heart-sparkline'), visible.map(day => average(day.heartValues)), '#c77980');
   renderSleepWeek(visible);
+  renderWorkouts(allDays);
   renderInsight(visible, meanSteps, meanSleep, meanExercise);
   setText('#data-status', importedRecords ? `Imported data · ${allDays.length} days` : 'Sample data · 30 days');
   setText('#source-note', importedRecords ? 'LOCAL INSIGHT' : 'DEMO INSIGHT');
@@ -212,6 +295,7 @@ function parseAppleHealthXml(xml) {
   const documentXml = new DOMParser().parseFromString(xml, 'application/xml');
   if (documentXml.querySelector('parsererror')) throw new Error('Could not read this XML export.');
   const records = [];
+  const workouts = [];
   const types = {
     HKQuantityTypeIdentifierStepCount: 'steps',
     HKQuantityTypeIdentifierActiveEnergyBurned: 'energy',
@@ -242,17 +326,42 @@ function parseAppleHealthXml(xml) {
     const source = node.getAttribute('sourceName') || 'Apple Health';
     records.push({ date: start, metric: 'sleep', value: (end - start) / 3600000, source });
   });
-  if (!records.length) throw new Error('No supported activity, heart-rate, or sleep records were found.');
-  return records;
+  documentXml.querySelectorAll('Workout').forEach(node => {
+    const date = new Date(node.getAttribute('startDate'));
+    if (Number.isNaN(date.getTime())) return;
+    const durationValue = Number(node.getAttribute('duration'));
+    const durationUnit = (node.getAttribute('durationUnit') || 'min').toLowerCase();
+    let duration = durationValue;
+    if (durationUnit.startsWith('h')) duration *= 60;
+    else if (durationUnit.startsWith('s')) duration /= 60;
+    if (!Number.isFinite(duration) || duration <= 0) return;
+    let energy = Number(node.getAttribute('totalEnergyBurned')) || 0;
+    const energyUnit = (node.getAttribute('totalEnergyBurnedUnit') || '').toLowerCase();
+    if (energyUnit.includes('kj')) energy *= .239006;
+    const rawType = (node.getAttribute('workoutActivityType') || 'Workout').replace(/^HKWorkoutActivityType/, '');
+    const type = rawType.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([A-Z])([A-Z][a-z])/g, '$1 $2');
+    workouts.push({ date, type, duration, energy, source: node.getAttribute('sourceName') || 'Apple Health' });
+  });
+  if (!records.length && !workouts.length) throw new Error('No supported activity, heart-rate, sleep, or workout records were found.');
+  return { records, workouts };
 }
 async function importHealthFile(file) {
   try {
     const content = await file.text();
-    importedRecords = file.name.toLowerCase().endsWith('.xml') ? parseAppleHealthXml(content) : parseCsv(content);
+    if (file.name.toLowerCase().endsWith('.xml')) {
+      const parsed = parseAppleHealthXml(content);
+      importedRecords = parsed.records;
+      importedWorkouts = parsed.workouts;
+    } else {
+      importedRecords = parseCsv(content);
+      importedWorkouts = [];
+    }
     render();
-    showToast(`Loaded ${numberFormat.format(importedRecords.length)} readings locally.`);
+    const workoutCount = importedWorkouts.length;
+    showToast(`Loaded ${numberFormat.format(importedRecords.length)} readings and ${workoutCount} workouts locally.`);
   } catch (error) {
     importedRecords = null;
+    importedWorkouts = null;
     render();
     showToast(error.message || 'Could not read that file.');
   }
@@ -264,7 +373,24 @@ $('#health-file').addEventListener('change', event => {
   if (file) importHealthFile(file);
   event.target.value = '';
 });
-$('#reset-demo').addEventListener('click', () => { importedRecords = null; sourceFilter = 'all'; $('#source-filter').value = 'all'; render(); showToast('Demo data restored.'); });
+$('#goal-form').addEventListener('submit', event => {
+  event.preventDefault();
+  const data = new FormData(event.currentTarget);
+  const nextGoals = {
+    steps: Number(data.get('steps')),
+    exercise: Number(data.get('exercise')),
+    sleep: Number(data.get('sleep'))
+  };
+  if (!Object.values(nextGoals).every(value => Number.isFinite(value) && value > 0)) {
+    showToast('Enter a positive target for each goal.');
+    return;
+  }
+  goals = nextGoals;
+  try { localStorage.setItem(GOALS_KEY, JSON.stringify(goals)); } catch { /* Goals remain active for this page session. */ }
+  render();
+  showToast('Personal goals saved on this device.');
+});
+$('#reset-demo').addEventListener('click', () => { importedRecords = null; importedWorkouts = null; sourceFilter = 'all'; $('#source-filter').value = 'all'; render(); showToast('Demo data restored.'); });
 $('.range-tabs').addEventListener('click', event => {
   const button = event.target.closest('button[data-days]'); if (!button) return;
   activeDays = Number(button.dataset.days);
